@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Consentium IoT — Frontend</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:24px auto;padding:8px}
+    label{display:block;margin-top:12px}
+    input,button,select,textarea{font:inherit;padding:8px;margin-top:4px;width:100%;box-sizing:border-box}
+    .row{display:flex;gap:8px}
+    .row > *{flex:1}
+    .sensors{margin-top:12px}
+    .sensor{display:flex;gap:8px;margin-bottom:6px}
+    #log{white-space:pre-wrap;background:#111;color:#eee;padding:12px;border-radius:6px;min-height:120px;margin-top:12px;overflow:auto}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    .controls button{flex:1}
+  </style>
+</head>
+<body>
+  <h1>Consentium IoT — Frontend</h1>
+
+  <label>Send Key
+    <input id="sendKey" placeholder="send key" />
+  </label>
+  <label>Receive Key
+    <input id="receiveKey" placeholder="receive key" />
+  </label>
+  <label>Board Key
+    <input id="boardKey" placeholder="board key" />
+  </label>
+
+  <div style="display:flex;gap:8px;margin-top:6px">
+    <label style="flex:1">Firmware Version
+      <input id="firmwareVersion" placeholder="firmware version" />
+    </label>
+    <label style="flex:1">Device MAC
+      <input id="deviceMAC" placeholder="00:11:22:33:44:55" />
+    </label>
+  </div>
+
+  <div class="sensors">
+    <h3>Sensors</h3>
+    <div id="sensorsList"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="newInfo" placeholder="sensor info (e.g., temp)" />
+      <input id="newValue" placeholder="value" />
+      <button id="addSensor">Add</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="sendBtn">Send Data</button>
+    <button id="receiveBtn">Receive Data</button>
+    <button id="clearLog">Clear Log</button>
+  </div>
+
+  <div style="margin-top:12px">
+    <label><input type="checkbox" id="useProxy" /> Use local proxy (http://localhost:3000)</label>
+  </div>
+
+  <h3>Log / Response</h3>
+  <div id="log">Ready.</div>
+
+  <script src="./consentium.js"></script>
+  <script>
+    // Simple UI wiring using window.consentium
+    const sensorsList = document.getElementById('sensorsList');
+    const addSensorBtn = document.getElementById('addSensor');
+    const newInfo = document.getElementById('newInfo');
+    const newValue = document.getElementById('newValue');
+    const sendBtn = document.getElementById('sendBtn');
+    const receiveBtn = document.getElementById('receiveBtn');
+    const logEl = document.getElementById('log');
+    const clearLogBtn = document.getElementById('clearLog');
+
+    function log(...args){
+      const t = new Date().toISOString();
+      logEl.textContent += `\n[${t}] ` + args.map(a => (typeof a === 'object'? JSON.stringify(a,null,2): String(a))).join(' ');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function renderSensors() {
+      sensorsList.innerHTML = '';
+      const sensors = getSensors();
+      sensors.forEach((s, idx) => {
+        const div = document.createElement('div');
+        div.className = 'sensor row';
+        const info = document.createElement('input'); info.value = s.info; info.placeholder='info';
+        const value = document.createElement('input'); value.value = s.value; value.placeholder='value';
+        const del = document.createElement('button'); del.textContent='Remove';
+        del.onclick = () => { removeSensor(idx); renderSensors(); };
+        info.oninput = () => { updateSensor(idx, info.value, value.value); };
+        value.oninput = () => { updateSensor(idx, info.value, value.value); };
+        div.appendChild(info); div.appendChild(value); div.appendChild(del);
+        sensorsList.appendChild(div);
+      });
+    }
+
+    function getSensors(){
+      try { return JSON.parse(localStorage.getItem('ct_sensors')||'[]'); } catch(e){ return []; }
+    }
+    function saveSensors(arr){ localStorage.setItem('ct_sensors', JSON.stringify(arr)); }
+    function addSensor(info, value){ const s=getSensors(); s.push({info, value}); saveSensors(s); }
+    function removeSensor(idx){ const s=getSensors(); s.splice(idx,1); saveSensors(s); }
+    function updateSensor(idx, info, value){ const s=getSensors(); if(!s[idx]) return; s[idx].info=info; s[idx].value=value; saveSensors(s); }
+
+    addSensorBtn.onclick = (e)=>{
+      const info = newInfo.value.trim();
+      const value = newValue.value.trim();
+      if(!info){ alert('Enter sensor info'); return; }
+      if(value===""){ alert('Enter sensor value'); return; }
+      addSensor(info, value); newInfo.value=''; newValue.value=''; renderSensors();
+    }
+
+    clearLogBtn.onclick = ()=>{ logEl.textContent = '' };
+
+    sendBtn.onclick = async () => {
+      const sendKey = document.getElementById('sendKey').value.trim();
+      const boardKey = document.getElementById('boardKey').value.trim();
+      if(!sendKey || !boardKey){ alert('sendKey and boardKey required'); return; }
+      const sensors = getSensors().map(s => ({info: s.info, value: Number(s.value)}));
+      const firmwareVersion = document.getElementById('firmwareVersion').value.trim();
+      const deviceMAC = document.getElementById('deviceMAC').value.trim();
+      const boardInfo = { firmwareVersion, deviceMAC };
+      log('Sending data...', {sendKey, boardKey, sensors, boardInfo});
+      try {
+        const useProxy = document.getElementById('useProxy').checked;
+        if (useProxy) {
+          // Use local proxy directly (calls server which uses consentiumthings.js)
+          const resp = await fetch('/api/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sendKey, boardKey, sensors, boardInfo })
+          });
+          const json = await resp.json().catch(()=>null);
+          log('Send result (proxy):', { status: resp.status, body: json });
+        } else {
+          if (window.consentium && window.consentium.setProxy) window.consentium.setProxy(null);
+          const res = await window.consentium.sendData(sendKey, boardKey, sensors, boardInfo);
+          log('Send result:', res);
+        }
+      } catch (err) {
+        log('Send error:', err.message || err);
+      }
+    };
+
+    receiveBtn.onclick = async () => {
+      const receiveKey = document.getElementById('receiveKey').value.trim();
+      const boardKey = document.getElementById('boardKey').value.trim();
+      if(!receiveKey || !boardKey){ alert('receiveKey and boardKey required'); return; }
+      log('Requesting data...', {receiveKey, boardKey});
+      try{
+        const useProxy = document.getElementById('useProxy').checked;
+        if (useProxy) {
+          const url = `/api/receive?receiveKey=${encodeURIComponent(receiveKey)}&boardKey=${encodeURIComponent(boardKey)}&recents=true`;
+          const resp = await fetch(url, { method: 'GET' });
+          const json = await resp.json().catch(()=>null);
+          log('Receive result (proxy):', { status: resp.status, body: json });
+          if (json && json.feeds) {
+            const mapped = json.feeds.map(f=>`${f.info}: ${f.value}`).join('\n');
+            log('Parsed feeds:\n' + mapped);
+          }
+        } else {
+          if (window.consentium && window.consentium.setProxy) window.consentium.setProxy(null);
+          const res = await window.consentium.receiveData(receiveKey, boardKey, true);
+          log('Receive result:', res);
+          if(res && res.feeds){
+            const mapped = res.feeds.map(f=>`${f.info}: ${f.value}`).join('\n');
+            log('Parsed feeds:\n' + mapped);
+          }
+        }
+      }catch(err){ log('Receive error:', err.message || err); }
+    };
+
+    // initial render
+    renderSensors();
+  </script>
+</body>
+</html>
