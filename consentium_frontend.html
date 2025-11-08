@@ -1,180 +1,386 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Consentium IoT — Frontend</title>
-  <style>
-    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:900px;margin:24px auto;padding:8px}
-    label{display:block;margin-top:12px}
-    input,button,select,textarea{font:inherit;padding:8px;margin-top:4px;width:100%;box-sizing:border-box}
-    .row{display:flex;gap:8px}
-    .row > *{flex:1}
-    .sensors{margin-top:12px}
-    .sensor{display:flex;gap:8px;margin-bottom:6px}
-    #log{white-space:pre-wrap;background:#111;color:#eee;padding:12px;border-radius:6px;min-height:120px;margin-top:12px;overflow:auto}
-    .controls{display:flex;gap:8px;margin-top:8px}
-    .controls button{flex:1}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentium IoT API Demo</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom scrollbar for the response box */
+        #response-output::-webkit-scrollbar {
+            width: 8px;
+        }
+        #response-output::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #response-output::-webkit-scrollbar-thumb {
+            background: #a8a8a8;
+            border-radius: 10px;
+        }
+        #response-output::-webkit-scrollbar-thumb:hover {
+            background: #7a7a7a;
+        }
+        
+        .sensor-input-group {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
 </head>
-<body>
-  <h1>Consentium IoT — Frontend</h1>
+<body class="bg-gray-100 font-sans min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold text-center text-gray-800">Consentium IoT API Demo</h1>
+            <p class="text-center text-gray-600 mt-2">A test client for the v2 API functions.</p>
+        </header>
 
-  <label>Send Key
-    <input id="sendKey" placeholder="send key" />
-  </label>
-  <label>Receive Key
-    <input id="receiveKey" placeholder="receive key" />
-  </label>
-  <label>Board Key
-    <input id="boardKey" placeholder="board key" />
-  </label>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- ====== ACTIONS COLUMN ====== -->
+            <div class="flex flex-col gap-6">
+                
+                <!-- --- Common Config --- -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-4">Common Config</h2>
+                    <div>
+                        <label for="boardKey" class="block text-sm font-medium text-gray-700 mb-1">Board Key</label>
+                        <input type="text" id="boardKey" placeholder="<YOUR-BOARD-KEY>" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                </div>
 
-  <div style="display:flex;gap:8px;margin-top:6px">
-    <label style="flex:1">Firmware Version
-      <input id="firmwareVersion" placeholder="firmware version" />
-    </label>
-    <label style="flex:1">Device MAC
-      <input id="deviceMAC" placeholder="00:11:22:33:44:55" />
-    </label>
-  </div>
+                <!-- --- Submit Data --- -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-4">1. Submit Data (POST)</h2>
+                    <form id="submit-form" class="space-y-4">
+                        <div>
+                            <label for="sendKey" class="block text-sm font-medium text-gray-700 mb-1">Send Key</label>
+                            <input type="password" id="sendKey" placeholder="<YOUR-SEND-KEY>" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="macAddress" class="block text-sm font-medium text-gray-700 mb-1">Device MAC</label>
+                                <input type="text" id="macAddress" value="AA:BB:CC:11:22:33" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="architecture" class="block text-sm font-medium text-gray-700 mb-1">Architecture</label>
+                                <input type="text" id="architecture" value="ESP32" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
 
-  <div class="sensors">
-    <h3>Sensors</h3>
-    <div id="sensorsList"></div>
-    <div style="display:flex;gap:8px;margin-top:8px">
-      <input id="newInfo" placeholder="sensor info (e.g., temp)" />
-      <input id="newValue" placeholder="value" />
-      <button id="addSensor">Add</button>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label for="firmwareVersion" class="block text-sm font-medium text-gray-700 mb-1">Firmware Version</label>
+                                <input type="text" id="firmwareVersion" value="1.0.1" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label for="signalStrength" class="block text-sm font-medium text-gray-700 mb-1">Signal Strength (Optional)</label>
+                                <input type="number" id="signalStrength" value="-55" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                        </div>
+                        
+                        <!-- Sensor Inputs -->
+                        <fieldset class="border-t pt-4">
+                            <legend class="text-lg font-medium text-gray-900 mb-2">Sensors</legend>
+                            <div id="sensor-list" class="space-y-3">
+                                <!-- Initial Sensor Input -->
+                                <div class="flex items-center gap-2 sensor-input-group">
+                                    <input type="text" name="sensorInfo" placeholder="Info (e.g., Temperature)" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <input type="text" name="sensorData" placeholder="Data (e.g., 25.5)" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                    <button type="button" class="remove-sensor-btn text-red-500 hover:text-red-700" style="display: none;">&times;</button>
+                                </div>
+                            </div>
+                            <button type="button" id="add-sensor-btn" class="mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium">+ Add Sensor (max 5)</button>
+                        </fieldset>
+
+                        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md font-semibold shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Submit Data
+                        </button>
+                    </form>
+                </div>
+
+                <!-- --- Get Data --- -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-4">2. Get Data (GET)</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="receiveKey" class="block text-sm font-medium text-gray-700 mb-1">Receive Key</label>
+                            <input type="password" id="receiveKey" placeholder="<YOUR-RECEIVE-KEY>" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div class="flex gap-4">
+                            <button type="button" id="get-historical-btn" class="w-full bg-green-600 text-white py-2 px-4 rounded-md font-semibold shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Get Historical
+                            </button>
+                            <button type="button" id="get-recent-btn" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md font-semibold shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Get Recent
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ====== RESULTS COLUMN ====== -->
+            <div class="bg-white p-6 rounded-lg shadow-md">
+                <h2 class="text-2xl font-semibold text-gray-700 border-b pb-3 mb-4">API Response</h2>
+                
+                <!-- Status Message -->
+                <div id="status-message" class="hidden p-3 rounded-md mb-4 text-sm"></div>
+
+                <!-- Response Output -->
+                <pre id="response-output" class="bg-gray-900 text-white text-sm rounded-md p-4 overflow-auto h-96 min-h-[400px] max-h-[800px]">Waiting for API call...</pre>
+            </div>
+        </div>
     </div>
-  </div>
 
-  <div class="controls">
-    <button id="sendBtn">Send Data</button>
-    <button id="receiveBtn">Receive Data</button>
-    <button id="clearLog">Clear Log</button>
-  </div>
+    <!-- 
+      JavaScript for API calls.
+      The functions from consentiumthings.js are embedded here.
+    -->
+    <script type="module">
+        // --- Embedded Functions from consentiumthings.js ---
 
-  <div style="margin-top:12px">
-    <label><input type="checkbox" id="useProxy" /> Use local proxy (http://localhost:3000)</label>
-  </div>
+        const API_BASE_URL = "https://api.consentiumiot.com";
 
-  <h3>Log / Response</h3>
-  <div id="log">Ready.</div>
+        /**
+         * Submits sensor and board data.
+         */
+        async function submitSensorData(sendKey, boardKey, sensorArray, macAddress, architecture, firmwareVersion, statusOTA = false, signalStrength = null) {
+            const dataPayload = {
+                sensors: { sensorData: sensorArray },
+                boardInfo: {
+                    firmwareVersion: firmwareVersion,
+                    architecture: architecture,
+                    statusOTA: statusOTA,
+                    deviceMAC: macAddress,
+                    signalStrength: signalStrength
+                }
+            };
+            if (signalStrength === null || signalStrength === '') {
+                delete dataPayload.boardInfo.signalStrength;
+            }
 
-  <script src="./consentium.js"></script>
-  <script>
-    // Simple UI wiring using window.consentium
-    const sensorsList = document.getElementById('sensorsList');
-    const addSensorBtn = document.getElementById('addSensor');
-    const newInfo = document.getElementById('newInfo');
-    const newValue = document.getElementById('newValue');
-    const sendBtn = document.getElementById('sendBtn');
-    const receiveBtn = document.getElementById('receiveBtn');
-    const logEl = document.getElementById('log');
-    const clearLogBtn = document.getElementById('clearLog');
+            const endpoint = `${API_BASE_URL}/v2/updateData?sendKey=${encodeURIComponent(sendKey)}&boardKey=${encodeURIComponent(boardKey)}`;
+            console.log("Submitting to:", endpoint);
+            console.log("Payload:", JSON.stringify(dataPayload, null, 2));
 
-    function log(...args){
-      const t = new Date().toISOString();
-      logEl.textContent += `\n[${t}] ` + args.map(a => (typeof a === 'object'? JSON.stringify(a,null,2): String(a))).join(' ');
-      logEl.scrollTop = logEl.scrollHeight;
-    }
-
-    function renderSensors() {
-      sensorsList.innerHTML = '';
-      const sensors = getSensors();
-      sensors.forEach((s, idx) => {
-        const div = document.createElement('div');
-        div.className = 'sensor row';
-        const info = document.createElement('input'); info.value = s.info; info.placeholder='info';
-        const value = document.createElement('input'); value.value = s.value; value.placeholder='value';
-        const del = document.createElement('button'); del.textContent='Remove';
-        del.onclick = () => { removeSensor(idx); renderSensors(); };
-        info.oninput = () => { updateSensor(idx, info.value, value.value); };
-        value.oninput = () => { updateSensor(idx, info.value, value.value); };
-        div.appendChild(info); div.appendChild(value); div.appendChild(del);
-        sensorsList.appendChild(div);
-      });
-    }
-
-    function getSensors(){
-      try { return JSON.parse(localStorage.getItem('ct_sensors')||'[]'); } catch(e){ return []; }
-    }
-    function saveSensors(arr){ localStorage.setItem('ct_sensors', JSON.stringify(arr)); }
-    function addSensor(info, value){ const s=getSensors(); s.push({info, value}); saveSensors(s); }
-    function removeSensor(idx){ const s=getSensors(); s.splice(idx,1); saveSensors(s); }
-    function updateSensor(idx, info, value){ const s=getSensors(); if(!s[idx]) return; s[idx].info=info; s[idx].value=value; saveSensors(s); }
-
-    addSensorBtn.onclick = (e)=>{
-      const info = newInfo.value.trim();
-      const value = newValue.value.trim();
-      if(!info){ alert('Enter sensor info'); return; }
-      if(value===""){ alert('Enter sensor value'); return; }
-      addSensor(info, value); newInfo.value=''; newValue.value=''; renderSensors();
-    }
-
-    clearLogBtn.onclick = ()=>{ logEl.textContent = '' };
-
-    sendBtn.onclick = async () => {
-      const sendKey = document.getElementById('sendKey').value.trim();
-      const boardKey = document.getElementById('boardKey').value.trim();
-      if(!sendKey || !boardKey){ alert('sendKey and boardKey required'); return; }
-      const sensors = getSensors().map(s => ({info: s.info, value: Number(s.value)}));
-      const firmwareVersion = document.getElementById('firmwareVersion').value.trim();
-      const deviceMAC = document.getElementById('deviceMAC').value.trim();
-      const boardInfo = { firmwareVersion, deviceMAC };
-      log('Sending data...', {sendKey, boardKey, sensors, boardInfo});
-      try {
-        const useProxy = document.getElementById('useProxy').checked;
-        if (useProxy) {
-          // Use local proxy directly (calls server which uses consentiumthings.js)
-          const resp = await fetch('/api/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sendKey, boardKey, sensors, boardInfo })
-          });
-          const json = await resp.json().catch(()=>null);
-          log('Send result (proxy):', { status: resp.status, body: json });
-        } else {
-          if (window.consentium && window.consentium.setProxy) window.consentium.setProxy(null);
-          const res = await window.consentium.sendData(sendKey, boardKey, sensors, boardInfo);
-          log('Send result:', res);
+            const response = await fetch(endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dataPayload),
+            });
+            const responseData = await response.json();
+            if (!response.ok) {
+                console.error('API Error:', response.status, responseData);
+                throw new Error(`API Error ${response.status}: ${responseData.message || response.statusText}`);
+            }
+            return responseData;
         }
-      } catch (err) {
-        log('Send error:', err.message || err);
-      }
-    };
 
-    receiveBtn.onclick = async () => {
-      const receiveKey = document.getElementById('receiveKey').value.trim();
-      const boardKey = document.getElementById('boardKey').value.trim();
-      if(!receiveKey || !boardKey){ alert('receiveKey and boardKey required'); return; }
-      log('Requesting data...', {receiveKey, boardKey});
-      try{
-        const useProxy = document.getElementById('useProxy').checked;
-        if (useProxy) {
-          const url = `/api/receive?receiveKey=${encodeURIComponent(receiveKey)}&boardKey=${encodeURIComponent(boardKey)}&recents=true`;
-          const resp = await fetch(url, { method: 'GET' });
-          const json = await resp.json().catch(()=>null);
-          log('Receive result (proxy):', { status: resp.status, body: json });
-          if (json && json.feeds) {
-            const mapped = json.feeds.map(f=>`${f.info}: ${f.value}`).join('\n');
-            log('Parsed feeds:\n' + mapped);
-          }
-        } else {
-          if (window.consentium && window.consentium.setProxy) window.consentium.setProxy(null);
-          const res = await window.consentium.receiveData(receiveKey, boardKey, true);
-          log('Receive result:', res);
-          if(res && res.feeds){
-            const mapped = res.feeds.map(f=>`${f.info}: ${f.value}`).join('\n');
-            log('Parsed feeds:\n' + mapped);
-          }
+        /**
+         * Retrieves all historical data.
+         */
+        async function getHistoricalData(receiveKey, boardKey) {
+            const endpoint = `${API_BASE_URL}/getData?receiveKey=${encodeURIComponent(receiveKey)}&boardKey=${encodeURIComponent(boardKey)}`;
+            console.log("Fetching historical from:", endpoint);
+            
+            const response = await fetch(endpoint, { method: 'GET' });
+            const responseData = await response.json();
+            if (!response.ok) {
+                console.error('API Error:', response.status, responseData);
+                throw new Error(`API Error ${response.status}: ${responseData.message || response.statusText}`);
+            }
+            return responseData;
         }
-      }catch(err){ log('Receive error:', err.message || err); }
-    };
 
-    // initial render
-    renderSensors();
-  </script>
+        /**
+         * Retrieves only the most recent data.
+         */
+        async function getRecentData(receiveKey, boardKey) {
+            const endpoint = `${API_BASE_URL}/getData?recents=true&receiveKey=${encodeURIComponent(receiveKey)}&boardKey=${encodeURIComponent(boardKey)}`;
+            console.log("Fetching recent from:", endpoint);
+
+            const response = await fetch(endpoint, { method: 'GET' });
+            const responseData = await response.json();
+            if (!response.ok) {
+                console.error('API Error:', response.status, responseData);
+                throw new Error(`API Error ${response.status}: ${responseData.message || response.statusText}`);
+            }
+            return responseData;
+        }
+
+        // --- Demo Page UI Logic ---
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get elements
+            const boardKeyInput = document.getElementById('boardKey');
+            const sendKeyInput = document.getElementById('sendKey');
+            const macAddressInput = document.getElementById('macAddress');
+            const architectureInput = document.getElementById('architecture');
+            const firmwareVersionInput = document.getElementById('firmwareVersion');
+            const signalStrengthInput = document.getElementById('signalStrength');
+            const receiveKeyInput = document.getElementById('receiveKey');
+            
+            const sensorList = document.getElementById('sensor-list');
+            const addSensorBtn = document.getElementById('add-sensor-btn');
+            
+            const submitForm = document.getElementById('submit-form');
+            const getHistoricalBtn = document.getElementById('get-historical-btn');
+            const getRecentBtn = document.getElementById('get-recent-btn');
+            
+            const statusMessage = document.getElementById('status-message');
+            const responseOutput = document.getElementById('response-output');
+
+            // --- Helper Functions ---
+            function showStatus(message, isError = false) {
+                statusMessage.textContent = message;
+                statusMessage.className = isError 
+                    ? 'block p-3 rounded-md mb-4 text-sm bg-red-100 text-red-700' 
+                    : 'block p-3 rounded-md mb-4 text-sm bg-blue-100 text-blue-700';
+            }
+
+            function showResult(data) {
+                responseOutput.textContent = JSON.stringify(data, null, 2);
+            }
+
+            function clearStatus() {
+                statusMessage.textContent = '';
+                statusMessage.className = 'hidden';
+            }
+
+            // --- Add Sensor Logic ---
+            addSensorBtn.addEventListener('click', () => {
+                const sensorGroups = sensorList.querySelectorAll('.sensor-input-group');
+                if (sensorGroups.length >= 5) {
+                    showStatus("You can add a maximum of 5 sensors.", true);
+                    return;
+                }
+                
+                const newSensorGroup = document.createElement('div');
+                newSensorGroup.className = 'flex items-center gap-2 sensor-input-group';
+                newSensorGroup.innerHTML = `
+                    <input type="text" name="sensorInfo" placeholder="Info" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <input type="text" name="sensorData" placeholder="Data" class="w-1/2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                    <button type="button" class="remove-sensor-btn text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+                `;
+                sensorList.appendChild(newSensorGroup);
+                
+                // Show remove button for all groups now
+                updateRemoveButtons();
+            });
+
+            // Delegate remove sensor clicks
+            sensorList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('remove-sensor-btn')) {
+                    e.target.closest('.sensor-input-group').remove();
+                    updateRemoveButtons();
+                }
+            });
+
+            function updateRemoveButtons() {
+                const sensorGroups = sensorList.querySelectorAll('.sensor-input-group');
+                sensorGroups.forEach((group, index) => {
+                    const removeBtn = group.querySelector('.remove-sensor-btn');
+                    removeBtn.style.display = sensorGroups.length > 1 ? 'inline' : 'none';
+                });
+            }
+
+            // --- Submit Form Logic ---
+            submitForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                clearStatus();
+                showStatus("Submitting data...", false);
+                responseOutput.textContent = "Loading...";
+
+                try {
+                    // Collect sensor data
+                    const sensorArray = [];
+                    const sensorGroups = sensorList.querySelectorAll('.sensor-input-group');
+                    sensorGroups.forEach(group => {
+                        const info = group.querySelector('input[name="sensorInfo"]').value;
+                        const data = group.querySelector('input[name="sensorData"]').value;
+                        if (info && data) {
+                            sensorArray.push({ info, data });
+                        }
+                    });
+
+                    if (sensorArray.length === 0) {
+                        throw new Error("Please add at least one valid sensor reading.");
+                    }
+
+                    const result = await submitSensorData(
+                        sendKeyInput.value,
+                        boardKeyInput.value,
+                        sensorArray,
+                        macAddressInput.value,
+                        architectureInput.value,
+                        firmwareVersionInput.value,
+                        false, // statusOTA is hardcoded to false for this demo
+                        signalStrengthInput.value
+                    );
+                    
+                    showStatus("Data submitted successfully!", false);
+                    showResult(result);
+
+                } catch (error) {
+                    showStatus(error.message, true);
+                    responseOutput.textContent = "Error occurred. Check console for details.";
+                }
+            });
+
+            // --- Get Historical Logic ---
+            getHistoricalBtn.addEventListener('click', async () => {
+                clearStatus();
+                showStatus("Fetching historical data...", false);
+                responseOutput.textContent = "Loading...";
+
+                try {
+                    const result = await getHistoricalData(
+                        receiveKeyInput.value,
+                        boardKeyInput.value
+                    );
+                    showStatus("Historical data retrieved.", false);
+                    showResult(result);
+                } catch (error) {
+                    showStatus(error.message, true);
+                    responseOutput.textContent = "Error occurred. Check console for details.";
+                }
+            });
+
+            // --- Get Recent Logic ---
+            getRecentBtn.addEventListener('click', async () => {
+                clearStatus();
+                showStatus("Fetching recent data...", false);
+                responseOutput.textContent = "Loading...";
+                
+                try {
+                    const result = await getRecentData(
+                        receiveKeyInput.value,
+                        boardKeyInput.value
+                    );
+                    showStatus("Recent data retrieved.", false);
+                    showResult(result);
+                } catch (error) {
+                    showStatus(error.message, true);
+                    responseOutput.textContent = "Error occurred. Check console for details.";
+                }
+            });
+            
+            // Set default sensor values for demo
+            sensorList.querySelector('input[name="sensorInfo"]').value = "Temperature";
+            sensorList.querySelector('input[name="sensorData"]').value = "25.5";
+        });
+    </script>
 </body>
 </html>
